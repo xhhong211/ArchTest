@@ -1,0 +1,332 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace ArchTest
+{
+    /// <summary>
+    /// 用户接口
+    /// </summary>
+    public interface IUser
+    {
+        int Id { get; set; }
+    }
+
+    /// <summary>
+    /// 聊天代理接口
+    /// 熊化宏@2019年3月5日9:59:59
+    /// </summary>
+    public interface IChatAgent
+    {
+        /// <summary>
+        /// 唯一标识
+        /// </summary>
+        int Id { get; }
+        /// <summary>
+        /// 聊天回话
+        /// </summary>
+        Chat Chat { get; }
+        /// <summary>
+        /// 说话
+        /// </summary>
+        /// <param name="message"></param>
+        void Say(Message message);
+        /// <summary>
+        /// 接收
+        /// </summary>
+        /// <param name="message"></param>
+        void Listen(Message message);
+
+    }
+    /// <summary>
+    /// ChageAgent管理器接口
+    /// 熊化宏@2019年3月5日10:33:34
+    /// </summary>
+    public interface IChatAgentManager
+    {
+        IList<IChatAgent> ChatAgents { get; }
+        void AddChatAgent(IChatAgent chatAgent);
+        void RemoveChatAgent(IChatAgent chatAgent);
+    }
+    /// <summary>
+    ///代理类管理对象基类
+    /// 熊化宏@2019年3月5日10:22:19
+    /// </summary>
+    public class ChatAgentManager : IChatAgentManager
+    {
+
+        private IList<IChatAgent> _chatAgents = new List<IChatAgent>();
+        public IList<IChatAgent> ChatAgents
+        {
+            get { return _chatAgents; }
+        }
+        public void AddChatAgent(IChatAgent chatAgent)
+        {
+            _chatAgents.Add(chatAgent);
+        }
+        public void RemoveChatAgent(IChatAgent chatAgent)
+        {
+            _chatAgents.Remove(chatAgent);
+        }
+    }
+
+        /// <summary>
+        /// 消息类型
+        /// 熊化宏@2019年3月5日9:40:10
+        /// </summary>
+        public enum MessageTypeEnum
+    {
+        /// <summary>
+        /// 未知
+        /// </summary>
+        Unknow = 0,
+        /// <summary>
+        /// 普通
+        /// </summary>
+        System = 1,
+        /// <summary>
+        /// 请求连接消息
+        /// </summary>
+        Request = 2,
+        /// <summary>
+        /// 图片信息
+        /// </summary>
+        Image = 4,
+        /// <summary>
+        /// 文本
+        /// </summary>
+        Text = 8
+    }
+    /// <summary>
+    /// 消息
+    /// 熊化宏@2019年3月5日9:40:10
+    /// </summary>
+    public class Message
+    {
+        public int Id { get; set; }
+        public MessageTypeEnum MessageType { get; set; }
+        public string Body { get; set; }
+        public int CreateUserId { get; set; }
+        public DateTime CreateTime { get; set; }
+    }
+
+    /// <summary>
+    /// 聊天管理类
+    /// 熊化宏@2019年3月5日9:52:59 
+    /// </summary>
+    public class ChatManager
+    {
+        /// <summary>
+        /// 所有客服人员聊天管理对象
+        /// </summary>
+        private IList<AgentChatAgentMananger> _agents;
+        /// <summary>
+        /// 所有访客的聊天管理对象
+        /// </summary>
+        private IList<Chat> _visitors;
+        /// <summary>
+        /// 根据Visitor创建聊天对象。
+        /// </summary>
+        /// <param name="visitor"></param>
+        public void CreateChat(Visitor visitor)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 聊天
+    /// 熊化宏@2019年3月5日9:52:50 
+    /// </summary>
+    public class Chat:ChatAgentManager
+    {
+        /// <summary>
+        /// 通过Visitor构造Chat
+        /// </summary>
+        /// <param name="visitor"></param>
+        public Chat(Visitor visitor)
+        {
+            _visitor = visitor;
+            AddChatAgent(new VisitorChatAgent(this, visitor));
+        }
+        /// <summary>
+        /// 加入新的客服人员
+        /// </summary>
+        /// <param name="agent"></param>
+        public void AddAgent(IChatAgent agent)
+        {
+            AddChatAgent(agent);
+        }
+
+        /// <summary>
+        /// 唯一表示Id
+        /// </summary>
+        public int Id { get; set; }
+
+        private Visitor _visitor;
+        public Visitor Visitor
+        {
+            get { return _visitor; }
+        }
+
+        /// <summary>
+        /// 广播消息
+        /// </summary>
+        /// <param name="id">消息生产者Id</param>
+        /// <param name="message"></param>
+        public void BroadcastMessage(int id, Message message)
+        {
+            foreach (var agent in ChatAgents)
+            {
+                if (agent.Id.Equals(id)) continue;
+                agent.Listen(message);
+            }
+        }
+
+        /// <summary>
+        /// 发送消息给所有客服人员.
+        /// </summary>
+        /// <param name="message"></param>
+        public void BroadcastMessage(Message message)
+        {
+            foreach (var agent in ChatAgents)
+            {
+                agent.Listen(message);
+            }
+        }
+    }
+    /// <summary>
+    /// 访客  
+    /// 熊化宏@2019年3月5日11:01:06
+    /// </summary>
+    public class Visitor : IUser
+    {
+        /// <summary>
+        /// 唯一表示Id
+        /// </summary>
+        public int Id { get; set; }
+        /// <summary>
+        /// 来源
+        /// </summary>
+        public int FromWhereType { get; set; }
+        /// <summary>
+        /// 性别
+        /// </summary>
+        public int Sex { get; set; }
+        public string FamilyName { get; set; }
+        public string IpAddress { get; set; }
+        public string PhoneNumber { get; set; }
+        public DateTime VisiteTime { get; set; }
+    }
+    /// <summary>
+    /// 访客聊天代理类
+    /// </summary>
+    public class VisitorChatAgent : IChatAgent,IDisposable
+    {
+        private Visitor _visitor;
+        private Chat _chat;
+        private readonly int _id;
+        public VisitorChatAgent(Chat chat, Visitor visitor)
+        {
+            _chat = chat;
+            _visitor = visitor;
+            _id = 0;///为假数据，实际情况动态生成，每个实例不一样。
+        }
+
+        public int Id { get { return _id; } }
+
+        public Chat Chat { get { return _chat; } }
+
+        public void Listen(Message message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Say(Message message)
+        {
+            _chat.BroadcastMessage(this.Id, message);
+        }
+
+        public void Dispose()
+        {
+            Chat.RemoveChatAgent(this);
+        }
+    }
+    /// <summary>
+    /// 客服
+    /// </summary>
+    public class Agent : IUser
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        /// <summary>
+        /// 性别
+        /// </summary>
+        public int Sex { get; set; }
+        public string WorkNumber { get; set; }
+
+
+    }
+    /// <summary>
+    /// 客服聊天代理类
+    /// </summary>
+    public class AgentChatAgent : IChatAgent,IDisposable
+    {
+        private Agent _agent;
+        private Chat _chat;
+        private readonly int _id;
+        private IChatAgentManager _agentChatAgentMananger;
+        public AgentChatAgent(Chat chat, Agent agent, IChatAgentManager agentChatAgentMananger)
+        {
+            _chat = chat;
+            _agent = agent;
+            _agentChatAgentMananger = agentChatAgentMananger;
+        }
+        public int Id { get { return _id; } }
+
+        public Chat Chat { get { return _chat; } }
+
+        public void Listen(Message message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Say(Message message)
+        {
+            _chat.BroadcastMessage(_id, message);
+        }
+
+        public void Dispose()
+        {
+            Chat.RemoveChatAgent(this);
+            _agentChatAgentMananger.RemoveChatAgent(this);
+        }
+    }
+    /// <summary>
+    /// 客服人员聊天管理类
+    /// </summary>
+    public class AgentChatAgentMananger : ChatAgentManager
+    {
+        private Agent _agent;
+        public AgentChatAgentMananger(Agent agent)
+        {
+            _agent = agent;
+        }
+        public Agent Agent {
+            get {
+                return _agent;
+            }
+        }
+        /// <summary>
+        /// 处理访客回话请求
+        /// </summary>
+        /// <param name="message">类型为请求回话</param>
+        public void HandleRequest(Message message)
+        {
+
+            throw new NotImplementedException();
+        }
+
+    }
+
+}
